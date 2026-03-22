@@ -27,6 +27,21 @@ app.use(express.json())
 
 // app.use('/auth', authRoutes)
 // app.use('/staff', staffRoutes)
+// Debug endpoint
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    dbConfigured: !!process.env.DATABASE_URL
+  })
+})
+// Add this before your other routes
+app.get('/debug', (req, res) => {
+  res.json({
+    DATABASE_URL_EXISTS: !!process.env.DATABASE_URL,
+    DATABASE_URL_LENGTH: process.env.DATABASE_URL?.length || 0,
+    // Don't send the actual URL in production
+  });
+});
 app.use('/user', userRoute)
 //app.use('/appointments', appointmentRoutes)
 
@@ -37,18 +52,38 @@ app.get('/', (req, res) => {
 
 
 
+// async function startServer() {
+//   try {
+//     // Test the connection
+//     await prisma.$connect()
+//     console.log('✅ Database connected successfully')
+    
+//     // Your server startup code
+//     app.listen(process.env.PORT, () => {
+//   console.log(`Server running on port ${process.env.PORT}`)
+// })
+//   } catch (error) {
+//     console.error('❌ Failed to connect to database:', error)
+//     process.exit(1)
+//   }
+// }
+
 async function startServer() {
   try {
-    // Test the connection
+    // Log environment status
+    console.log('Starting server...')
+    console.log('PORT:', process.env.PORT)
+    console.log('DATABASE_URL configured:', !!process.env.DATABASE_URL)
+    
+    // Test database connection
     await prisma.$connect()
     console.log('✅ Database connected successfully')
     
-    // Your server startup code
     app.listen(process.env.PORT, () => {
-  console.log(`Server running on port ${process.env.PORT}`)
-})
+      console.log(`🚀 Server running on port ${process.env.PORT}`)
+    })
   } catch (error) {
-    console.error('❌ Failed to connect to database:', error)
+    console.error('❌ Failed to start server:', error)
     process.exit(1)
   }
 }

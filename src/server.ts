@@ -46,7 +46,7 @@ app.use('/user', userRoute)
 //app.use('/appointments', appointmentRoutes)
 
 app.get('/', (req, res) => {
-  res.send('Appointa server API running')
+  res.send('inventory server API running')
 })
 
 

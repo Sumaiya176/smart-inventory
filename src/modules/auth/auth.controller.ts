@@ -4,8 +4,8 @@ import { sendResponse } from "../../util/sendResponse";
 
 const createUser = async (req : Request, res : Response) => {
     const user = {
-        name: "sumaiya",
-        email: "sumaiya@gmail.com",
+        name: "mmmm",
+        email: "mmm@gmail.com",
         password: "sumaiya"
     }
     const result = await userServices.createUser(user)

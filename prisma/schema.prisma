@@ -8,63 +8,203 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum AppointmentStatus {
-  Scheduled
-  Completed
-  Cancelled
-  NoShow
-}
-
+// ---------------- User --------------
 model User {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  password  String
-  createdAt DateTime @default(now())
+  id              String    @id @default(cuid())
+  email           String    @unique
+  password        String    
+  name            String?
+  role            UserRole  @default(VIEWER)
+  isActive        Boolean   @default(true)
+  lastLoginAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  orders          Order[]       @relation("UserOrders")
+  activityLogs    ActivityLog[] @relation("UserActivities")
+  restockActions  RestockAction[] @relation("UserRestocks")
 }
 
-model Staff {
-  id           String   @id @default(uuid())
-  name         String
-  serviceType  String
-  dailyCapacity Int
-  availability String
-  appointments Appointment[]
+enum UserRole {
+  ADMIN   
+  MANAGER 
+  CUSTOMER  
+  VIEWER
 }
 
-model Service {
-  id                String   @id @default(uuid())
-  name              String
-  duration          Int
-  requiredStaffType String
-
-  appointment Appointment[]
+// ---------------- Category Management ----------------
+model Category {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Relations
+  products    Product[]
 }
 
-model Appointment {
-  id           String   @id @default(uuid())
-  customerName String
-  datetime     DateTime
-  status       AppointmentStatus
-
-  serviceId String
-  staffId   String?
-
-  service Service @relation(fields: [serviceId], references: [id])
-  staff   Staff?  @relation(fields: [staffId], references: [id])
-
-  createdAt DateTime @default(now())
+// ----------- Product Management --------------
+model Product {
+  id                  String        @id @default(cuid())
+  name                String
+  sku                 String?        @unique // Stock Keeping Unit
+  description         String?
+  categoryId          String
+  category            Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  price               Decimal         @db.Decimal(10, 2)
+  stockQuantity       Int           @default(0)
+  minimumStockThreshold Int         @default(5)
+  status              ProductStatus @default(ACTIVE)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  
+  // Relations
+  orderItems          OrderItem[]
+  restockQueue        RestockQueueItem?
+  activityLogs        ActivityLog[]   @relation("ProductActivities")
 }
 
-model Queue {
-  id            String   @id @default(uuid())
-  appointmentId String   @unique
-  position      Int
-  createdAt     DateTime @default(now())
+enum ProductStatus {
+  ACTIVE
+  OUT_OF_STOCK
+  DISCONTINUED
 }
 
+// ---------------- Order Management ----------------
+model Order {
+  id              String      @id @default(cuid())
+  orderNumber     String      @unique
+  customerName    String
+  customerEmail   String?
+  customerPhone   String?
+  totalAmount     Decimal       @db.Decimal(10, 2)
+  status          OrderStatus @default(PENDING)
+  notes           String?
+  userId          String      // User who created the order
+  user            User        @relation("UserOrders", fields: [userId], references: [id])
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  // Relations
+  items           OrderItem[]
+  activityLogs    ActivityLog[] @relation("OrderActivities")
+}
+
+enum OrderStatus {
+  PENDING    
+  CONFIRMED   
+  SHIPPED     
+  DELIVERED   
+  CANCELLED   
+}
+
+// ---------------- Order Items ----------------
+model OrderItem {
+  id          String    @id @default(cuid())
+  orderId     String
+  order       Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product   @relation(fields: [productId], references: [id])
+  quantity    Int
+  unitPrice   Decimal     @db.Decimal(10, 2)
+  subtotal    Decimal     @db.Decimal(10, 2)
+  createdAt   DateTime  @default(now())
+  
+  // Composite unique constraint to prevent duplicate products in same order
+  @@unique([orderId, productId])
+}
+
+// ---------------- Restock Queue Management ----------------
+model RestockQueueItem {
+  id          String          @id @default(cuid())
+  productId   String          @unique
+  product     Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  currentStock Int
+  threshold   Int
+  priority    RestockPriority @default(MEDIUM)
+  addedAt     DateTime        @default(now())
+  resolvedAt  DateTime?
+  resolvedBy  String?
+  
+  // Relations
+  restockActions RestockAction[]
+}
+
+enum RestockPriority {
+  HIGH    // Stock <= 2 units
+  MEDIUM  // Stock <= threshold but > 2
+  LOW     // Stock slightly below threshold
+}
+
+// Restock Actions (History)
+model RestockAction {
+  id              String    @id @default(cuid())
+  restockQueueId  String
+  restockQueue    RestockQueueItem @relation(fields: [restockQueueId], references: [id])
+  previousStock   Int?
+  newStock        Int
+  addedQuantity   Int
+  userId          String
+  user            User      @relation("UserRestocks", fields: [userId], references: [id])
+  note            String?
+  createdAt       DateTime  @default(now())
+}
+
+// ---------------- Activity Logging ----------------
 model ActivityLog {
-  id        String   @id @default(uuid())
-  message   String
-  createdAt DateTime @default(now())
+  id          String          @id @default(cuid())
+  action      String          // Description of action
+  actionType  ActivityType
+  entityType  EntityType
+  entityId    String          // ID of affected entity (order, product, etc.)
+  userId      String?
+  user        User?           @relation("UserActivities", fields: [userId], references: [id])
+  productId   String?
+  product     Product?        @relation("ProductActivities", fields: [productId], references: [id])
+  orderId     String?
+  order       Order?          @relation("OrderActivities", fields: [orderId], references: [id])
+  metadata    Json?           // Additional data as JSON
+  createdAt   DateTime        @default(now())
+  
+  @@index([createdAt])
+  @@index([entityType, entityId])
+}
+
+enum ActivityType {
+  ORDER_CREATED
+  ORDER_UPDATED
+  ORDER_CANCELLED
+  ORDER_STATUS_CHANGED
+  PRODUCT_CREATED
+  PRODUCT_UPDATED
+  PRODUCT_RESTOCKED
+  STOCK_UPDATED
+  ADDED_TO_RESTOCK_QUEUE
+  REMOVED_FROM_RESTOCK_QUEUE
+  USER_LOGIN
+  USER_LOGOUT
+  CATEGORY_CREATED
+}
+
+enum EntityType {
+  ORDER
+  PRODUCT
+  CATEGORY
+  USER
+  RESTOCK_QUEUE
+}
+
+// Dashboard Summary (View or Materialized Table)
+model DashboardSummary {
+  id              String    @id @default(cuid())
+  date            DateTime  @unique
+  totalOrders     Int
+  totalRevenue    Decimal   @db.Decimal(10, 2)
+  pendingOrders   Int
+  completedOrders Int
+  lowStockCount   Int
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }

@@ -3,12 +3,8 @@ import { userServices } from "./auth.service";
 import { sendResponse } from "../../util/sendResponse";
 
 const createUser = async (req : Request, res : Response) => {
-    const user = {
-        name: "mmmm",
-        email: "mmm@gmail.com",
-        password: "sumaiya"
-    }
-    const result = await userServices.createUser(user)
+    console.log("Creating user with data:", req.body); // Debug log
+    const result = await userServices.createUser(req.body)
 
     sendResponse(res, {data:result, message: "User created Successfully", isSuccess: true})
 }

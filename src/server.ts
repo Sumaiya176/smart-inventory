@@ -7,6 +7,8 @@ import dotenv from 'dotenv'
 // import appointmentRoutes from './routes/appointment.routes'
 import { userRoute } from './modules/auth/auth.routes'
 import prisma from './prisma/client'
+import { categoryRoute } from './modules/category/category.routes'
+import { productRoute } from './modules/product/product.routes'
 
 dotenv.config()
 
@@ -43,6 +45,8 @@ app.get('/debug', (req, res) => {
   });
 });
 app.use('/user', userRoute)
+app.use('/category', categoryRoute)
+app.use('/product', productRoute)
 //app.use('/appointments', appointmentRoutes)
 
 app.get('/', (req, res) => {

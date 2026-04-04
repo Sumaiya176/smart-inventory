@@ -9,6 +9,9 @@ import { userRoute } from './modules/auth/auth.routes'
 import prisma from './prisma/client'
 import { categoryRoute } from './modules/category/category.routes'
 import { productRoute } from './modules/product/product.routes'
+import { orderRoute } from './modules/order/order.routes'
+import { dashboardRoute } from './modules/dashboard/dashboard.routes'
+import { activityLogRoute } from './modules/activity-log/activity-log.routes'
 
 dotenv.config()
 
@@ -47,7 +50,9 @@ app.get('/debug', (req, res) => {
 app.use('/user', userRoute)
 app.use('/category', categoryRoute)
 app.use('/product', productRoute)
-//app.use('/appointments', appointmentRoutes)
+app.use('/order', orderRoute)
+app.use('/dashboard', dashboardRoute)
+app.use('/activities', activityLogRoute) // Add this line to include activities route
 
 app.get('/', (req, res) => {
   res.send('inventory helloo server API running')

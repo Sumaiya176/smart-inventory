@@ -17,7 +17,7 @@ dotenv.config()
 
 const app = express()
 
-const allowedOrigins = ['http://localhost:3000', 'https://appointa.vercel.app'];
+const allowedOrigins = ['http://localhost:3000', 'https://smart-inventory-client.vercel.app'];
 
 const corsOptions = {
   origin: allowedOrigins

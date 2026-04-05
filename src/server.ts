@@ -12,6 +12,7 @@ import { productRoute } from './modules/product/product.routes'
 import { orderRoute } from './modules/order/order.routes'
 import { dashboardRoute } from './modules/dashboard/dashboard.routes'
 import { activityLogRoute } from './modules/activity-log/activity-log.routes'
+import { restockQueueRoute } from './modules/restockQueue/restockQueue.routes'
 
 dotenv.config()
 
@@ -52,7 +53,8 @@ app.use('/category', categoryRoute)
 app.use('/product', productRoute)
 app.use('/order', orderRoute)
 app.use('/dashboard', dashboardRoute)
-app.use('/activities', activityLogRoute) // Add this line to include activities route
+app.use('/activities', activityLogRoute) 
+app.use('/restock-queue', restockQueueRoute)
 
 app.get('/', (req, res) => {
   res.send('inventory helloo server API running')

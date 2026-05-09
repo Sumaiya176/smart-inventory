@@ -186,6 +186,7 @@ enum ActivityType {
   USER_LOGIN
   USER_LOGOUT
   CATEGORY_CREATED
+  PRODUCT_DELETED
 }
 
 enum EntityType {

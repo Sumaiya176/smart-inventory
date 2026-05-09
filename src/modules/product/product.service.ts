@@ -98,8 +98,130 @@ const getAllProducts = async (queries: any) => {
     return data
 }
 
+const getProductById = async (productId : string) => {
+  const product = await prisma.product.findUnique({
+    where : {id : productId},
+    include : { category : true}
+  })
+  return product
+}
+
+const updateProduct = async (productId : string, userId: string, data : any) => {
+  const { name, sku, description, categoryId, price, stockQuantity, minimumStockThreshold, status } = data;
+
+  const product = await prisma.product.update({
+    where: { id: productId },
+    data: {
+      name,
+      sku,
+      description,
+      categoryId,
+      price,
+      stockQuantity: stockQuantity || 0,
+      minimumStockThreshold: minimumStockThreshold || 5,
+      status: status || 'ACTIVE'
+    },
+    include: { category: true }
+  });
+
+    await prisma.activityLog.create({
+      data: {
+        action: `Product "${product.name}" updated`,
+        actionType: 'PRODUCT_UPDATED',
+        entityType: 'PRODUCT',
+        entityId: product.id,
+        userId: userId,
+        metadata: data
+      }
+    });
+
+  return product;
+};
+
+const deleteProduct = async (productId : string, userId: string) => {
+
+  const product = await prisma.product.findUnique({
+      where: { id: productId }
+    });
+    
+    await prisma.product.delete({
+      where: { id: productId }
+    });
+    
+    await prisma.activityLog.create({
+      data: {
+        action: `Product "${product?.name}" deleted`, 
+        actionType: 'PRODUCT_DELETED',
+        entityType: 'PRODUCT',
+        entityId: productId,
+        userId: userId
+      }
+    });
+
+  return product;
+};
+
+const updateStock = async (productId: string, userId: string, quantity: number) => {
+    const product = await prisma.product.findUnique({
+      where: { id: productId }
+    });
+    
+    if (!product) {
+      throw new Error('Product not found');
+    }
+    
+    const newStock = product.stockQuantity + quantity;
+    const newStatus = newStock <= 0 ? 'OUT_OF_STOCK' : 'ACTIVE';
+    
+    const updatedProduct = await prisma.product.update({
+      where: { id: productId },
+      data: {
+        stockQuantity: newStock,
+        status: newStatus
+      }
+    });
+    
+    // Update restock queue
+    if (newStock <= updatedProduct.minimumStockThreshold) {
+      const priority = newStock <= 2 ? 'HIGH' : 'MEDIUM';
+      await prisma.restockQueueItem.upsert({
+        where: { productId: updatedProduct.id },
+        update: {
+          currentStock: newStock,
+          priority,
+          resolvedAt: null
+        },
+        create: {
+          productId: updatedProduct.id,
+          currentStock: newStock,
+          threshold: updatedProduct.minimumStockThreshold,
+          priority
+        }
+      });
+    } else {
+      // Remove from restock queue if stock is above threshold
+      await prisma.restockQueueItem.deleteMany({
+        where: { productId: updatedProduct.id }
+      });
+    }
+    
+    await prisma.activityLog.create({
+      data: {
+        action: `Stock updated for "${updatedProduct.name}"`,
+        actionType: 'STOCK_UPDATED',
+        entityType: 'PRODUCT',
+        entityId: updatedProduct.id,
+        userId: userId,
+        metadata: { previousStock: product.stockQuantity, newStock, change: quantity }
+      }
+    });
+}
 
 export const productServices  = {
     createProduct,
-    getAllProducts
+    getAllProducts,
+    getProductById,
+    updateStock,
+    updateProduct,
+    deleteProduct
 }

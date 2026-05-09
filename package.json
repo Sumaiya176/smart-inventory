@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "migrate:init": "npx prisma migrate dev --name init",
-    "migrate": "npx prisma migrate dev --name",
+    "migrate:create": "prisma migrate dev --name",
     "generate": "npx prisma generate",
     "predev": "npm run generate",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",

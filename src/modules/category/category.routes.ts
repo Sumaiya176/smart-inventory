@@ -5,6 +5,7 @@ const route = Router()
 
 route.post("/create-category", categoryControllers.createCategory)
 route.get("/categories", categoryControllers.getAllCategories)
+route.get("/category/categoryId", categoryControllers.getCategoryById)
 
 export const categoryRoute = 
     route

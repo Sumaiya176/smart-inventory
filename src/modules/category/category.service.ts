@@ -1,4 +1,5 @@
 import prisma from "../../prisma/client"
+import { NotFoundError } from "../../util/error";
 
 const createCategory = async (data : any) => {
     const { name, description } = data;
@@ -47,8 +48,22 @@ const getAllCategories = async () => {
     return categories
 }
 
+const getCategoryById = async(categoryId : string) => {
+  const category = await prisma.category.findUnique({
+    where : {id : categoryId},
+    include : { products : true}
+  })
+
+  if (!category) {
+    new NotFoundError("Category not found")
+  }
+
+  return category
+}
+
 
 export const categoryServices  = {
     createCategory,
-    getAllCategories
+    getAllCategories,
+    getCategoryById
 }
